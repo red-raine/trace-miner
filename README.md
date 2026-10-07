@@ -36,6 +36,25 @@ LANGFUSE_PK / LANGFUSE_SK). The OTLP transport is the proven
 wayward.trace_shipper (EXP-026 verified: 78,509 events in 24s, idempotent
 byte-offset resume, Langfuse dedupes by trace_id+span_id).
 
+## Gitea on lyre — remotes + setup
+
+Canonical backup remote (models NEVER go to GitHub): `http://192.168.8.217:3005/zcode/trace-miner`
+(web UI: `http://lyre:3005/zcode/trace-miner`). ⚠️ The old `gitea` remote
+(`opencode/trace-miner`) and GitHub `origin` (`red-raine/trace-miner`) point at repos
+that do not exist — kept only as historical references; do not push to them.
+
+Create a new repository on gitea, then from the empty repo's quick-start (this repo's path):
+
+```bash
+git remote add origin http://192.168.8.217:3005/zcode/trace-miner.git
+git push -u origin master        # our default branch is master (repo template says main)
+git push -u origin trace-miner-upgrade-wave1   # upgrade lane branch (plan-23)
+```
+
+Auth note: push auth needs the token in the URL or a credential helper
+(`GIT_ASKPASS` alone is declined by this server). Token lives in
+`build models/scripts/.env` as `GITEA_TOKEN` — never commit it.
+
 ## Adapters (2026-verified sources)
 
 | Agent | Store | Adapter |
