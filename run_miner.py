@@ -26,6 +26,9 @@ ADAPTER_REGISTRY: dict[str, tuple[str, str]] = {
     "opencode": ("adapters.opencode", "iter_sessions"),
     "zcode": ("adapters.zcode", "iter_sessions"),
     "wayward": ("adapters.wayward", "iter_sessions"),
+    "mecha": ("adapters.mecha", "iter_sessions"),
+    "pseudag": ("adapters.pseudag", "iter_sessions"),
+    "tracefoundry": ("adapters.tracefoundry", "iter_sessions"),
 }
 
 
