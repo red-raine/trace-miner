@@ -49,6 +49,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--list", action="store_true", help="list adapters")
     ap.add_argument("--ship", action="store_true", help="ship to Langfuse")
     ap.add_argument("--gold", action="store_true", help="emit gold (distill-friendly) JSONL")
+    ap.add_argument("--no-resolve", action="store_true", help="skip alias->upstream model resolution")
     ap.add_argument("--min-score", type=float, default=0.7)
     ap.add_argument("--out", type=str, default="", help="output dir (default traces/)")
     args = ap.parse_args(argv)
@@ -72,6 +73,21 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[{agent}] mined {len(sessions)} sessions / "
               f"{sum(len(s.spans) for s in sessions)} spans")
         total += len(sessions)
+
+        # A-W3: resolve routing aliases → actual upstream model (best-effort)
+        if not args.no_resolve:
+            try:
+                from resolve import resolve_session_model
+
+                resolved_n = 0
+                for sess in sessions:
+                    sess.model, sess.metadata["resolved"] = resolve_session_model(sess)
+                    if sess.metadata.get("resolved"):
+                        resolved_n += 1
+                if resolved_n:
+                    print(f"[{agent}] resolved {resolved_n} aliases -> upstream models")
+            except Exception as exc:
+                print(f"[{agent}] resolve skipped: {exc}", file=sys.stderr)
 
         if args.gold:
             gold, stats = gold_filter(sessions, args.min_score)

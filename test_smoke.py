@@ -97,9 +97,50 @@ def test_score():
     print("ok: score good/bad detector bridge")
 
 
+def test_resolve_alias_detection():
+    from resolve import ALIAS_RE
+
+    assert ALIAS_RE.match("free-flash-pool")
+    assert ALIAS_RE.match("wayward-minion")
+    assert ALIAS_RE.match("coding-glm-5-free")
+    assert ALIAS_RE.match("agnes-flash")
+    assert not ALIAS_RE.match("google-gemini-3-6-flash")
+    assert not ALIAS_RE.match("nyx-qwen25-1.5b")
+    assert not ALIAS_RE.match("openai/gpt-oss-20b")
+    # concrete model already → resolve returns (claimed, False)
+    from canon import Session
+    from resolve import resolve_session_model
+
+    sess = Session(agent="t", session_id="x", model="google-gemini-3-6-flash")
+    m, resolved = resolve_session_model(sess)
+    assert m == "google-gemini-3-6-flash" and resolved is False
+    print("ok: resolve alias detection (concrete stays, alias triggers lookup)")
+
+
+def test_ship_carries_model():
+    from ship import build_payload, build_span, ship_session
+
+    sess = Session(agent="claude", session_id="s1", model="opencode/gpt-oss-20b")
+    sess.spans = [Span(agent="claude", session_id="s1", kind=EventKind.ITERATION,
+                       ts="2026-01-01T00:00:00+00:00", name="assistant.message",
+                       attrs={"role": "assistant"}, seq=1)]
+    sent = {}
+
+    def fake_post(url, auth, body):
+        sent["body"] = json.loads(body)
+        return 200
+
+    ship_session(sess, "http://x/otel", ("pk", "sk"), post=fake_post)
+    span = sent["body"]["resourceSpans"][0]["scopeSpans"][0]["spans"][0]
+    attrs = {a["key"]: a["value"] for a in span["attributes"]}
+    assert attrs.get("trace.model", {}).get("stringValue") == "opencode/gpt-oss-20b"
+    print("ok: ship carries resolved model attribute")
+
+
 def main():
     tests = [test_canon_ids, test_claude_adapter, test_opencode_adapter,
-             test_wayward_adapter, test_ship_mocked, test_score]
+             test_wayward_adapter, test_ship_mocked, test_score,
+             test_resolve_alias_detection, test_ship_carries_model]
     failed = 0
     for t in tests:
         try:

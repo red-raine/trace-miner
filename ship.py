@@ -52,10 +52,12 @@ def _attr(key: str, value):
     return {"key": otel_key, "value": {"stringValue": json.dumps(value)}}
 
 
-def build_span(sp: Span) -> dict:
+def build_span(sp: Span, model: str = "") -> dict:
     """Canonical Span -> one OTLP point-span."""
     start = _ts_to_nano(sp.ts)
     attrs = [_attr("agent", sp.agent), _attr("session", sp.session_id)]
+    if model:
+        attrs.append(_attr("model", model))
     if sp.task_id:
         attrs.append(_attr("task", sp.task_id))
     for k, v in sp.attrs.items():
@@ -126,7 +128,7 @@ def ship_session(session: Session, url: str, auth: tuple[str, str],
                  post=None) -> int:
     """Ship one canonical session to Langfuse. Returns span count."""
     post_fn = post if post is not None else _post
-    spans = [build_span(sp) for sp in session.spans]
+    spans = [build_span(sp, model=session.model) for sp in session.spans]
     if not spans:
         return 0
     for i in range(0, len(spans), BATCH_SIZE):
